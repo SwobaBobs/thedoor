@@ -1,0 +1,1439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Forbidden Door</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Cinzel:wght@400;600&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0806;
+    --bg2: #100d0a;
+    --panel: #13100c;
+    --border: #3a2a18;
+    --border-glow: #6b4c2a;
+    --gold: #c9943a;
+    --gold-light: #e8b85a;
+    --gold-dim: #7a5c22;
+    --ember: #ff6b1a;
+    --ember-dim: #8b3a0a;
+    --text: #d4b896;
+    --text-dim: #7a6048;
+    --smoke: #1e1912;
+    --key-bg: #1a1410;
+    --key-border: #4a3420;
+    --forge-bg: #0e0c09;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IM Fell English', serif;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    user-select: none;
+  }
+
+  /* Noise texture overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.4;
+  }
+
+  header {
+    text-align: center;
+    padding: 12px 0 8px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, #0d0b08 0%, var(--bg) 100%);
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  header h1 {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 1.4rem;
+    color: var(--gold);
+    letter-spacing: 0.3em;
+    text-shadow: 0 0 20px rgba(201,148,58,0.5), 0 0 40px rgba(201,148,58,0.2);
+  }
+
+  header p {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    letter-spacing: 0.15em;
+    margin-top: 4px;
+    font-style: italic;
+  }
+
+  .main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    gap: 0;
+  }
+
+  /* ===== LEFT PANEL ===== */
+  .left-panel {
+    width: 240px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--border);
+    background: var(--panel);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .panel-title {
+    font-family: 'Cinzel', serif;
+    font-size: 0.65rem;
+    letter-spacing: 0.25em;
+    color: var(--gold-dim);
+    text-transform: uppercase;
+    padding: 10px 14px 6px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .panel-title::before {
+    content: '';
+    display: inline-block;
+    width: 20px;
+    height: 1px;
+    background: var(--gold-dim);
+  }
+
+  .section-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .tab {
+    flex: 1;
+    padding: 7px 4px;
+    font-family: 'Cinzel', serif;
+    font-size: 0.55rem;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    text-align: center;
+    cursor: pointer;
+    border-right: 1px solid var(--border);
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+  .tab:last-child { border-right: none; }
+  .tab.active {
+    color: var(--gold);
+    background: rgba(201,148,58,0.08);
+    box-shadow: inset 0 -2px 0 var(--gold);
+  }
+  .tab:hover:not(.active) { color: var(--text); background: rgba(255,255,255,0.02); }
+
+  .piece-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    padding: 8px;
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  .piece-grid::-webkit-scrollbar { width: 4px; }
+  .piece-grid::-webkit-scrollbar-track { background: transparent; }
+  .piece-grid::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* ===== KEY PIECE CARD ===== */
+  .key-piece {
+    background: var(--key-bg);
+    border: 1px solid var(--key-border);
+    border-radius: 4px;
+    padding: 7px 6px 8px;
+    cursor: grab;
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+    position: relative;
+    overflow: visible;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .key-piece::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold-dim), transparent);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .key-piece:hover {
+    border-color: var(--gold-dim);
+    box-shadow: 0 0 12px rgba(201,148,58,0.15), inset 0 0 12px rgba(201,148,58,0.05);
+    transform: translateY(-1px);
+  }
+  .key-piece:hover::before { opacity: 1; }
+  .key-piece:active { cursor: grabbing; transform: scale(0.97); }
+
+  .key-piece .piece-svg {
+    width: 100%;
+    height: 32px;
+    display: block;
+    flex-shrink: 0;
+  }
+
+  .key-piece .piece-name {
+    font-family: 'Cinzel', serif;
+    font-size: 0.58rem;
+    letter-spacing: 0.08em;
+    color: var(--gold-light);
+    margin-top: 5px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: visible;
+    text-shadow: 0 0 8px rgba(201,148,58,0.3);
+  }
+
+  .key-piece .piece-type-badge {
+    font-size: 0.4rem;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+    margin-top: 2px;
+    font-style: italic;
+  }
+
+  .key-piece.dragging {
+    opacity: 0.4;
+    transform: scale(0.95);
+  }
+
+  /* ===== CENTER FORGE ===== */
+  .center-forge {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--forge-bg);
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Ambient light rings */
+  .center-forge::before {
+    content: '';
+    position: absolute;
+    width: 300px;
+    height: 300px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(201,148,58,0.04) 0%, transparent 70%);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+
+  .forge-label {
+    font-family: 'Cinzel', serif;
+    font-size: 0.6rem;
+    letter-spacing: 0.3em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .forge-label::before, .forge-label::after {
+    content: '';
+    display: block;
+    width: 30px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border));
+  }
+  .forge-label::after {
+    background: linear-gradient(270deg, transparent, var(--border));
+  }
+
+  .forge-area {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    align-items: center;
+    position: relative;
+  }
+
+  .forge-slot {
+    width: 100px;
+    height: 64px;
+    border: 1px dashed var(--border);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    transition: border-color 0.2s, background 0.2s;
+    background: rgba(255,255,255,0.01);
+  }
+
+  .forge-slot.has-piece {
+    border-style: solid;
+    border-color: var(--gold-dim);
+    background: rgba(201,148,58,0.05);
+  }
+
+  .forge-slot.drag-over {
+    border-color: var(--gold);
+    background: rgba(201,148,58,0.1);
+    box-shadow: 0 0 16px rgba(201,148,58,0.2);
+  }
+
+  .forge-slot-label {
+    font-family: 'Cinzel', serif;
+    font-size: 0.5rem;
+    letter-spacing: 0.15em;
+    color: var(--border-glow);
+    text-transform: uppercase;
+    pointer-events: none;
+  }
+
+  .forge-slot .slot-piece {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+  }
+
+  .forge-slot .slot-piece .piece-svg {
+    width: 80px;
+    height: 40px;
+  }
+
+  .forge-slot .slot-piece .piece-name {
+    font-family: 'Cinzel', serif;
+    font-size: 0.45rem;
+    color: var(--gold);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .forge-slot .remove-btn {
+    position: absolute;
+    top: 2px;
+    right: 3px;
+    font-size: 0.55rem;
+    color: var(--text-dim);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s;
+    line-height: 1;
+  }
+  .forge-slot:hover .remove-btn { opacity: 1; }
+  .forge-slot .remove-btn:hover { color: var(--ember); }
+
+  /* Connector lines between slots */
+  .forge-connector {
+    width: 2px;
+    height: 10px;
+    background: linear-gradient(180deg, var(--border-glow), var(--border-glow));
+    position: relative;
+    opacity: 0.5;
+  }
+
+  .forge-connector.active { opacity: 1; background: var(--gold-dim); }
+
+  .forge-actions {
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .forge-btn {
+    font-family: 'Cinzel', serif;
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gold);
+    background: transparent;
+    border: 1px solid var(--gold-dim);
+    padding: 10px 28px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .forge-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(201,148,58,0.1) 0%, transparent 100%);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .forge-btn:hover::before { opacity: 1; }
+  .forge-btn:hover {
+    border-color: var(--gold);
+    box-shadow: 0 0 20px rgba(201,148,58,0.2);
+    color: var(--gold-light);
+  }
+
+  .forge-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  .forge-btn.clear {
+    font-size: 0.55rem;
+    padding: 6px 16px;
+    color: var(--text-dim);
+    border-color: var(--border);
+  }
+
+  .forge-btn.clear:hover {
+    color: var(--text);
+    border-color: var(--border-glow);
+    box-shadow: none;
+  }
+
+  .forge-msg {
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    font-style: italic;
+    letter-spacing: 0.05em;
+    min-height: 1.2em;
+    text-align: center;
+  }
+
+  .forge-msg.success { color: #7adb78; }
+  .forge-msg.fail { color: var(--ember); }
+
+  /* Assembled key preview */
+  .assembled-key {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+
+  /* ===== RIGHT PANEL - DOOR ===== */
+  .right-panel {
+    width: 280px;
+    flex-shrink: 0;
+    border-left: 1px solid var(--border);
+    background: var(--panel);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Floor shadow */
+  .right-panel::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: linear-gradient(0deg, rgba(0,0,0,0.5) 0%, transparent 100%);
+    pointer-events: none;
+  }
+
+  .door-container {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .door-frame {
+    position: relative;
+    width: 160px;
+    height: 240px;
+  }
+
+  /* Door glow effect */
+  .door-frame::before {
+    content: '';
+    position: absolute;
+    inset: -8px;
+    background: radial-gradient(ellipse at center, rgba(201,148,58,0.06) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .door-svg-wrap {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    z-index: 1;
+  }
+
+  .keyhole-slot {
+    position: absolute;
+    bottom: 50px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .keyhole-area {
+    width: 38px;
+    height: 54px;
+    position: relative;
+    cursor: pointer;
+    transition: filter 0.2s;
+  }
+
+  .keyhole-area:hover { filter: drop-shadow(0 0 6px rgba(201,148,58,0.5)); }
+
+  .keyhole-label {
+    font-family: 'Cinzel', serif;
+    font-size: 0.42rem;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    text-align: center;
+  }
+
+  .door-title {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    color: var(--gold-dim);
+    margin-top: 16px;
+    text-align: center;
+  }
+
+  .door-subtitle {
+    font-size: 0.58rem;
+    color: var(--text-dim);
+    font-style: italic;
+    margin-top: 6px;
+    text-align: center;
+    letter-spacing: 0.05em;
+  }
+
+  .insert-key-btn {
+    margin-top: 14px;
+    font-family: 'Cinzel', serif;
+    font-size: 0.6rem;
+    letter-spacing: 0.15em;
+    color: var(--gold);
+    background: transparent;
+    border: 1px solid var(--gold-dim);
+    padding: 9px 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+
+  .insert-key-btn:hover {
+    border-color: var(--gold);
+    box-shadow: 0 0 16px rgba(201,148,58,0.2);
+  }
+
+  .insert-key-btn:disabled {
+    opacity: 0.25;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  /* ===== FLOATING DRAG GHOST ===== */
+  #drag-ghost {
+    position: fixed;
+    pointer-events: none;
+    z-index: 9000;
+    opacity: 0.85;
+    transform: translate(-50%, -50%);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    background: var(--key-bg);
+    border: 1px solid var(--gold);
+    box-shadow: 0 0 24px rgba(201,148,58,0.4);
+    border-radius: 4px;
+    padding: 8px 10px;
+    min-width: 80px;
+  }
+
+  #drag-ghost.visible { display: flex; }
+
+  #drag-ghost svg { width: 70px; height: 38px; }
+  #drag-ghost .ghost-name {
+    font-family: 'Cinzel', serif;
+    font-size: 0.5rem;
+    color: var(--gold);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
+  /* ===== DOOR OPEN OVERLAY ===== */
+  #door-open-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 8000;
+    background: #000;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  #door-open-overlay.show { display: flex; }
+
+  .open-door-scene {
+    position: relative;
+    width: 220px;
+    height: 320px;
+  }
+
+  .door-light-bg {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 80% 90% at 50% 50%, #fff 0%, #fffbe0 20%, #ffd060 45%, #c97a10 70%, transparent 100%);
+    border-radius: 4px;
+    z-index: 0;
+  }
+
+  .door-swing-wrap {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    transform-origin: left center;
+    animation: doorSwing 1.8s cubic-bezier(0.4, 0, 0.2, 1) 0.3s forwards;
+  }
+
+  @keyframes doorSwing {
+    0%   { transform: perspective(800px) rotateY(0deg); }
+    100% { transform: perspective(800px) rotateY(-110deg); }
+  }
+
+  .light-bloom {
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse 60% 60% at 50% 50%, rgba(255,240,180,0.18) 0%, transparent 70%);
+    z-index: 1;
+    opacity: 0;
+    animation: bloomGrow 1.2s ease 0.5s forwards;
+    pointer-events: none;
+  }
+
+  @keyframes bloomGrow {
+    0%   { opacity: 0; }
+    100% { opacity: 1; }
+  }
+
+  .light-portal {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    cursor: pointer;
+    opacity: 0;
+    animation: portalAppear 0.6s ease 1.8s forwards;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+  }
+
+  .light-portal::after {
+    content: 'Enter';
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 1rem;
+    color: rgba(255,240,180,0.9);
+    letter-spacing: 0.3em;
+    text-shadow: 0 0 20px #fff, 0 0 40px #ffd700;
+    animation: pulseText 1.5s ease-in-out 2s infinite alternate;
+  }
+
+  @keyframes pulseText {
+    from { opacity: 0.7; text-shadow: 0 0 10px #fff; }
+    to   { opacity: 1;   text-shadow: 0 0 30px #fff, 0 0 60px #ffd700; }
+  }
+
+  @keyframes portalAppear {
+    to { opacity: 1; }
+  }
+
+  .open-text {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 1rem;
+    color: var(--gold);
+    letter-spacing: 0.3em;
+    margin-top: 40px;
+    opacity: 0;
+    animation: fadeInText 0.6s ease 2s forwards;
+    text-shadow: 0 0 30px rgba(201,148,58,0.8);
+    position: relative;
+    z-index: 5;
+  }
+
+  @keyframes fadeInText {
+    to { opacity: 1; }
+  }
+
+  .fail-shake {
+    animation: shake 0.4s ease;
+  }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-6px); }
+    40% { transform: translateX(6px); }
+    60% { transform: translateX(-4px); }
+    80% { transform: translateX(4px); }
+  }
+
+  /* ===== WRONG KEY OVERLAY ===== */
+  #wrong-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 7000;
+    background: rgba(0,0,0,0.6);
+    align-items: center;
+    justify-content: center;
+  }
+  #wrong-overlay.show { display: flex; }
+
+  .wrong-box {
+    background: var(--panel);
+    border: 1px solid var(--ember-dim);
+    padding: 28px 40px;
+    text-align: center;
+    box-shadow: 0 0 40px rgba(139,58,10,0.3);
+    animation: wrongAppear 0.3s ease;
+  }
+
+  @keyframes wrongAppear {
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  .wrong-box h2 {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 0.9rem;
+    color: var(--ember);
+    letter-spacing: 0.2em;
+    margin-bottom: 10px;
+  }
+
+  .wrong-box p {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    font-style: italic;
+    margin-bottom: 18px;
+  }
+
+  .wrong-box button {
+    font-family: 'Cinzel', serif;
+    font-size: 0.6rem;
+    letter-spacing: 0.15em;
+    color: var(--text-dim);
+    background: transparent;
+    border: 1px solid var(--border);
+    padding: 8px 20px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.2s;
+  }
+
+  .wrong-box button:hover { border-color: var(--border-glow); color: var(--text); }
+
+  /* Ambient particles */
+  .ember-particle {
+    position: absolute;
+    width: 2px;
+    height: 2px;
+    border-radius: 50%;
+    background: var(--ember);
+    pointer-events: none;
+    animation: floatUp linear infinite;
+    opacity: 0;
+  }
+
+  @keyframes floatUp {
+    0% { transform: translateY(0) translateX(0); opacity: 0.6; }
+    100% { transform: translateY(-80px) translateX(var(--drift)); opacity: 0; }
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* Slot counts */
+  .slot-count {
+    font-family: 'Cinzel', serif;
+    font-size: 0.45rem;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    text-align: center;
+    margin-top: 4px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>The Forbidden Door</h1>
+  <p>Forge the key that was never meant to be found</p>
+</header>
+
+<div class="main">
+
+  <!-- LEFT: Key pieces -->
+  <div class="left-panel">
+    <div class="panel-title">Fragments</div>
+    <div class="section-tabs">
+      <div class="tab active" data-tab="top">Top <span id="top-count"></span></div>
+      <div class="tab" data-tab="middle">Middle <span id="mid-count"></span></div>
+      <div class="tab" data-tab="bottom">Bottom <span id="bot-count"></span></div>
+    </div>
+    <div class="piece-grid" id="piece-grid"></div>
+  </div>
+
+  <!-- CENTER: Forge -->
+  <div class="center-forge">
+    <div class="forge-label">The Forge</div>
+
+    <div class="forge-area">
+      <div class="forge-slot" id="slot-top" data-slot="top">
+        <span class="forge-slot-label">Top Piece</span>
+      </div>
+      <div class="forge-connector" id="conn-1"></div>
+      <div class="forge-slot" id="slot-middle" data-slot="middle">
+        <span class="forge-slot-label">Middle Piece</span>
+      </div>
+      <div class="forge-connector" id="conn-2"></div>
+      <div class="forge-slot" id="slot-bottom" data-slot="bottom">
+        <span class="forge-slot-label">Bottom Piece</span>
+      </div>
+    </div>
+
+    <div class="forge-actions">
+      <div class="forge-msg" id="forge-msg">Drop fragments into the forge to assemble a key</div>
+      <button class="forge-btn clear" id="clear-btn" onclick="clearForge()">Clear Forge</button>
+    </div>
+
+    <!-- Ambient embers -->
+    <div id="embers-container"></div>
+  </div>
+
+  <!-- RIGHT: Door -->
+  <div class="right-panel">
+    <div class="door-container">
+      <div class="door-frame">
+        <div class="door-svg-wrap" id="door-svg-wrap"></div>
+        <div class="keyhole-slot">
+          <div class="keyhole-area" id="keyhole-area" onclick="tryKey()">
+            <!-- Keyhole SVG rendered by JS -->
+          </div>
+          <div class="keyhole-label">Insert Key</div>
+        </div>
+      </div>
+      <div class="door-title">The Sealed Gate</div>
+      <div class="door-subtitle" id="door-subtitle">What lies beyond is not for mortal eyes</div>
+      <button class="insert-key-btn" id="insert-btn" onclick="tryKey()" disabled>Try the Key</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- Drag ghost -->
+<div id="drag-ghost">
+  <svg id="ghost-svg"></svg>
+  <div class="ghost-name" id="ghost-name"></div>
+</div>
+
+<!-- Door open overlay -->
+<div id="door-open-overlay">
+  <div class="open-door-scene" id="open-door-scene">
+    <!-- rendered by JS -->
+    <div class="light-portal" id="light-portal" onclick="goToOtherSide()"></div>
+  </div>
+  <div class="open-text">It opens...</div>
+</div>
+
+<!-- Wrong key overlay -->
+<div id="wrong-overlay" onclick="closeWrong()">
+  <div class="wrong-box" onclick="event.stopPropagation()">
+    <h2>Rejected</h2>
+    <p id="wrong-msg">The door does not yield to this combination.</p>
+    <button onclick="closeWrong()">Try Again</button>
+  </div>
+</div>
+
+<script>
+// ==============================
+// DATA
+// ==============================
+
+const TOP_NAMES = [
+  'Shade', 'Ember', 'Frost', 'Storm', 'Veil',
+  'Raven', 'Mist', 'Blaze', 'Cinder', 'Gale',
+  'Thorn', 'Dusk', 'Dawn', 'Flux', 'Crisp',
+  'Haze', 'Gloom', 'Flare', 'Ash', 'Vex',
+  'Sable', 'Keen', 'Dire', 'Iron', 'Coal',
+  'Wrath', 'Surge', 'Rift', 'Bane', 'Husk',
+  'Void', 'Spark', 'Crest', 'Pike', 'Edge'
+];
+
+const MIDDLE_NAMES = [
+  'Tail', 'Bone', 'Heart', 'Stone', 'Root',
+  'Spine', 'Core', 'Soul', 'Vein', 'Fang',
+  'Claw', 'Wing', 'Scale', 'Hide', 'Brow',
+  'Rib', 'Knuckle', 'Tendon', 'Marrow', 'Graft',
+  'Sponge', 'Gold', 'Mouse', 'Pelt', 'Feather',
+  'Sinew', 'Flesh', 'Nerve', 'Lobe', 'Gourd',
+  'Shell', 'Crust', 'Limb', 'Nape', 'Mane'
+];
+
+const BOTTOM_NAMES = [
+  'School', 'Haven', 'Realm', 'Keep', 'Lair',
+  'Forge', 'Vault', 'Grove', 'Hollow', 'Crypt',
+  'Chapel', 'Tower', 'Bridge', 'Pit', 'Gate',
+  'Shrine', 'Coven', 'Lodge', 'Burrow', 'Den',
+  'Quarry', 'Mine', 'Dune', 'Shore', 'Bluff',
+  'Pass', 'Ridge', 'Knoll', 'Mere', 'Loch',
+  'Heath', 'Moor', 'Bog', 'Fen', 'Copse'
+];
+
+// The winning combination
+const WINNING_KEY = { top: 'Shade', middle: 'Tail', bottom: 'School' };
+
+// Forge state
+let forgeSlots = { top: null, middle: null, bottom: null };
+let currentTab = 'top';
+let dragData = null;
+
+// ==============================
+// SVG GENERATORS
+// ==============================
+
+function getTopSVG(color1 = '#c9943a', color2 = '#7a5c22') {
+  // Key bow (the ring/handle part)
+  return `<svg viewBox="0 0 80 44" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="tg" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" style="stop-color:${color1};stop-opacity:1"/>
+        <stop offset="100%" style="stop-color:${color2};stop-opacity:1"/>
+      </linearGradient>
+      <filter id="ts"><feGaussianBlur stdDeviation="0.5"/></filter>
+    </defs>
+    <!-- outer ring -->
+    <circle cx="40" cy="20" r="17" fill="none" stroke="url(#tg)" stroke-width="3.5"/>
+    <!-- inner ring -->
+    <circle cx="40" cy="20" r="10" fill="none" stroke="${color2}" stroke-width="1.5" opacity="0.6"/>
+    <!-- center gem -->
+    <circle cx="40" cy="20" r="4" fill="${color1}" opacity="0.7"/>
+    <circle cx="38.5" cy="18.5" r="1.5" fill="#fff" opacity="0.3"/>
+    <!-- stem start (bottom of bow) -->
+    <rect x="37" y="36" width="6" height="8" rx="1" fill="url(#tg)"/>
+    <!-- shine -->
+    <path d="M28 13 Q33 9 38 12" stroke="#fff" stroke-width="1" fill="none" opacity="0.25"/>
+  </svg>`;
+}
+
+function getMiddleSVG(color1 = '#c9943a', color2 = '#7a5c22') {
+  // Key shaft (the long bar)
+  return `<svg viewBox="0 0 80 44" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="mg" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" style="stop-color:${color1};stop-opacity:1"/>
+        <stop offset="100%" style="stop-color:${color2};stop-opacity:1"/>
+      </linearGradient>
+    </defs>
+    <!-- main shaft -->
+    <rect x="37" y="0" width="6" height="44" rx="1" fill="url(#mg)"/>
+    <!-- decorative notch 1 -->
+    <rect x="43" y="10" width="10" height="4" rx="1" fill="${color1}" opacity="0.8"/>
+    <!-- decorative notch 2 -->
+    <rect x="43" y="22" width="7" height="4" rx="1" fill="${color1}" opacity="0.7"/>
+    <!-- decorative notch 3 -->
+    <rect x="43" y="32" width="12" height="4" rx="1" fill="${color1}" opacity="0.6"/>
+    <!-- edge shine -->
+    <rect x="37" y="0" width="1.5" height="44" rx="0.5" fill="#fff" opacity="0.15"/>
+    <!-- rune marks -->
+    <line x1="39" y1="6" x2="42" y2="6" stroke="${color2}" stroke-width="0.8" opacity="0.5"/>
+    <line x1="39" y1="18" x2="42" y2="18" stroke="${color2}" stroke-width="0.8" opacity="0.5"/>
+  </svg>`;
+}
+
+function getBottomSVG(color1 = '#c9943a', color2 = '#7a5c22') {
+  // Key tip with teeth
+  return `<svg viewBox="0 0 80 44" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="bg2" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" style="stop-color:${color1};stop-opacity:1"/>
+        <stop offset="100%" style="stop-color:${color2};stop-opacity:0.7"/>
+      </linearGradient>
+    </defs>
+    <!-- shaft continued -->
+    <rect x="37" y="0" width="6" height="28" rx="1" fill="url(#bg2)"/>
+    <!-- tooth 1 -->
+    <rect x="43" y="4" width="8" height="5" rx="1" fill="${color1}" opacity="0.9"/>
+    <!-- tooth 2 -->
+    <rect x="43" y="14" width="6" height="5" rx="1" fill="${color1}" opacity="0.8"/>
+    <!-- tip shape -->
+    <polygon points="37,28 43,28 43,38 40,44 37,38" fill="url(#bg2)"/>
+    <!-- shine -->
+    <rect x="37" y="0" width="1.5" height="28" rx="0.5" fill="#fff" opacity="0.15"/>
+    <line x1="38" y1="30" x2="41" y2="42" stroke="#fff" stroke-width="0.8" opacity="0.1"/>
+  </svg>`;
+}
+
+function getFullKeySVG(size = 1) {
+  const w = 80 * size, h = 120 * size;
+  return `<svg viewBox="0 0 80 120" width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="fkg" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" style="stop-color:#e8b85a;stop-opacity:1"/>
+        <stop offset="100%" style="stop-color:#7a5c22;stop-opacity:1"/>
+      </linearGradient>
+    </defs>
+    <!-- BOW -->
+    <circle cx="40" cy="22" r="17" fill="none" stroke="url(#fkg)" stroke-width="3.5"/>
+    <circle cx="40" cy="22" r="10" fill="none" stroke="#7a5c22" stroke-width="1.5" opacity="0.6"/>
+    <circle cx="40" cy="22" r="4" fill="#e8b85a" opacity="0.7"/>
+    <circle cx="38.5" cy="20.5" r="1.5" fill="#fff" opacity="0.3"/>
+    <!-- SHAFT -->
+    <rect x="37" y="38" width="6" height="38" rx="1" fill="url(#fkg)"/>
+    <rect x="43" y="42" width="10" height="4" rx="1" fill="#c9943a" opacity="0.8"/>
+    <rect x="43" y="54" width="7" height="4" rx="1" fill="#c9943a" opacity="0.7"/>
+    <rect x="43" y="64" width="12" height="4" rx="1" fill="#c9943a" opacity="0.6"/>
+    <!-- TIP -->
+    <rect x="37" y="76" width="6" height="22" rx="1" fill="url(#fkg)"/>
+    <rect x="43" y="78" width="8" height="5" rx="1" fill="#c9943a" opacity="0.9"/>
+    <rect x="43" y="88" width="6" height="5" rx="1" fill="#c9943a" opacity="0.8"/>
+    <polygon points="37,98 43,98 43,108 40,114 37,108" fill="url(#fkg)"/>
+    <!-- Shine -->
+    <rect x="37" y="38" width="1.5" height="70" rx="0.5" fill="#fff" opacity="0.15"/>
+    <path d="M28 15 Q33 11 38 14" stroke="#fff" stroke-width="1" fill="none" opacity="0.25"/>
+  </svg>`;
+}
+
+function getDoorSVG() {
+  return `<svg viewBox="0 0 160 240" width="160" height="240" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="doorGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" style="stop-color:#1a1410"/>
+        <stop offset="100%" style="stop-color:#0d0b08"/>
+      </linearGradient>
+      <linearGradient id="frameGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" style="stop-color:#4a3420"/>
+        <stop offset="100%" style="stop-color:#2a1e10"/>
+      </linearGradient>
+    </defs>
+    <!-- Frame -->
+    <rect x="2" y="2" width="156" height="236" rx="3" fill="none" stroke="url(#frameGrad)" stroke-width="6"/>
+    <rect x="6" y="6" width="148" height="228" rx="2" fill="none" stroke="#3a2a18" stroke-width="1.5"/>
+    <!-- Door panel -->
+    <rect x="10" y="10" width="140" height="220" rx="2" fill="url(#doorGrad)"/>
+    <!-- Panel lines -->
+    <rect x="18" y="18" width="124" height="96" rx="2" fill="none" stroke="#2a1e10" stroke-width="1.5"/>
+    <rect x="18" y="126" width="124" height="96" rx="2" fill="none" stroke="#2a1e10" stroke-width="1.5"/>
+    <!-- Top cross hatch -->
+    <line x1="18" y1="66" x2="142" y2="66" stroke="#2a1e10" stroke-width="1"/>
+    <line x1="80" y1="18" x2="80" y2="114" stroke="#2a1e10" stroke-width="1"/>
+    <!-- Bottom cross hatch -->
+    <line x1="18" y1="174" x2="142" y2="174" stroke="#2a1e10" stroke-width="1"/>
+    <line x1="80" y1="126" x2="80" y2="222" stroke="#2a1e10" stroke-width="1"/>
+    <!-- Nail/rivet details -->
+    <circle cx="20" cy="20" r="2" fill="#3a2a18"/>
+    <circle cx="140" cy="20" r="2" fill="#3a2a18"/>
+    <circle cx="20" cy="220" r="2" fill="#3a2a18"/>
+    <circle cx="140" cy="220" r="2" fill="#3a2a18"/>
+    <circle cx="20" cy="114" r="1.5" fill="#3a2a18"/>
+    <circle cx="140" cy="114" r="1.5" fill="#3a2a18"/>
+    <circle cx="20" cy="126" r="1.5" fill="#3a2a18"/>
+    <circle cx="140" cy="126" r="1.5" fill="#3a2a18"/>
+    <!-- Arcane symbols on door -->
+    <text x="80" y="75" text-anchor="middle" font-size="22" fill="#2a1e10" font-family="serif">⛧</text>
+    <text x="80" y="180" text-anchor="middle" font-size="16" fill="#2a1e10" font-family="serif">✦</text>
+    <!-- Edge shading -->
+    <rect x="10" y="10" width="4" height="220" fill="rgba(255,255,255,0.02)" rx="1"/>
+  </svg>`;
+}
+
+function getKeyholeSVG(glowing = false) {
+  const glow = glowing ? 'filter:drop-shadow(0 0 8px #c9943a);' : '';
+  return `<svg viewBox="0 0 38 54" width="38" height="54" style="${glow}" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="khg" cx="50%" cy="40%" r="50%">
+        <stop offset="0%" style="stop-color:#2a1e10;stop-opacity:1"/>
+        <stop offset="100%" style="stop-color:#0d0b08;stop-opacity:1"/>
+      </radialGradient>
+    </defs>
+    <!-- Plate -->
+    <rect x="1" y="1" width="36" height="52" rx="4" fill="#1a1410" stroke="#4a3420" stroke-width="1.5"/>
+    <!-- Keyhole circle -->
+    <circle cx="19" cy="22" r="9" fill="url(#khg)" stroke="#3a2a18" stroke-width="1"/>
+    <!-- Keyhole slot -->
+    <polygon points="14,28 24,28 22,48 16,48" fill="url(#khg)" stroke="#3a2a18" stroke-width="0.5"/>
+    <!-- Inner ring detail -->
+    <circle cx="19" cy="22" r="5" fill="none" stroke="#2a1e10" stroke-width="1"/>
+    <!-- Glow when active -->
+    ${glowing ? '<circle cx="19" cy="22" r="9" fill="rgba(201,148,58,0.15)"/>' : ''}
+  </svg>`;
+}
+
+// ==============================
+// SHUFFLE
+// ==============================
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+shuffle(TOP_NAMES);
+shuffle(MIDDLE_NAMES);
+shuffle(BOTTOM_NAMES);
+
+// ==============================
+// INIT
+// ==============================
+
+function renderDoor() {
+  document.getElementById('door-svg-wrap').innerHTML = getDoorSVG();
+  document.getElementById('keyhole-area').innerHTML = getKeyholeSVG(false);
+}
+
+function renderPieceGrid() {
+  const grid = document.getElementById('piece-grid');
+  grid.innerHTML = '';
+
+  let names, svgFn, label;
+  if (currentTab === 'top') { names = TOP_NAMES; svgFn = getTopSVG; label = 'Top'; }
+  else if (currentTab === 'middle') { names = MIDDLE_NAMES; svgFn = getMiddleSVG; label = 'Middle'; }
+  else { names = BOTTOM_NAMES; svgFn = getBottomSVG; label = 'Bottom'; }
+
+  names.forEach(name => {
+    const el = document.createElement('div');
+    el.className = 'key-piece';
+    el.innerHTML = `
+      <svg class="piece-svg" viewBox="0 0 80 44" xmlns="http://www.w3.org/2000/svg">${svgFn().replace(/^<svg[^>]*>/, '').replace('</svg>', '')}</svg>
+      <div class="piece-name">${name}</div>
+      <div class="piece-type-badge">${label} fragment</div>
+    `;
+    el.draggable = true;
+
+    el.addEventListener('dragstart', (e) => {
+      dragData = { name, type: currentTab };
+      el.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'copy';
+
+      // Show ghost
+      const ghost = document.getElementById('drag-ghost');
+      const ghostSvg = document.getElementById('ghost-svg');
+      ghostSvg.innerHTML = svgFn().replace(/^<svg[^>]*>/, '').replace('</svg>', '');
+      ghostSvg.setAttribute('viewBox', '0 0 80 44');
+      document.getElementById('ghost-name').textContent = name;
+      ghost.classList.add('visible');
+    });
+
+    el.addEventListener('dragend', () => {
+      el.classList.remove('dragging');
+      document.getElementById('drag-ghost').classList.remove('visible');
+    });
+
+    grid.appendChild(el);
+  });
+
+  // Update counts
+  document.getElementById('top-count').textContent = `(${TOP_NAMES.length})`;
+  document.getElementById('mid-count').textContent = `(${MIDDLE_NAMES.length})`;
+  document.getElementById('bot-count').textContent = `(${BOTTOM_NAMES.length})`;
+}
+
+// ==============================
+// TABS
+// ==============================
+
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    currentTab = tab.dataset.tab;
+    renderPieceGrid();
+  });
+});
+
+// ==============================
+// DRAG GHOST FOLLOW
+// ==============================
+
+document.addEventListener('dragover', (e) => {
+  const ghost = document.getElementById('drag-ghost');
+  ghost.style.left = e.clientX + 'px';
+  ghost.style.top = e.clientY + 'px';
+  e.preventDefault();
+});
+
+// ==============================
+// FORGE DROP ZONES
+// ==============================
+
+['slot-top', 'slot-middle', 'slot-bottom'].forEach(slotId => {
+  const slot = document.getElementById(slotId);
+  const slotType = slotId.replace('slot-', '');
+
+  slot.addEventListener('dragover', (e) => {
+    if (dragData && dragData.type === slotType) {
+      e.preventDefault();
+      slot.classList.add('drag-over');
+    }
+  });
+
+  slot.addEventListener('dragleave', () => {
+    slot.classList.remove('drag-over');
+  });
+
+  slot.addEventListener('drop', (e) => {
+    e.preventDefault();
+    slot.classList.remove('drag-over');
+    if (!dragData) return;
+
+    if (dragData.type !== slotType) {
+      showMessage(`That's a ${dragData.type} fragment — drop it in the ${dragData.type} slot`, 'fail');
+      return;
+    }
+
+    forgeSlots[slotType] = dragData.name;
+    renderForgeSlots();
+    dragData = null;
+  });
+});
+
+// ==============================
+// FORGE RENDER
+// ==============================
+
+function renderForgeSlots() {
+  ['top', 'middle', 'bottom'].forEach(type => {
+    const slot = document.getElementById(`slot-${type}`);
+    const name = forgeSlots[type];
+
+    if (name) {
+      let svgContent;
+      if (type === 'top') svgContent = getTopSVG();
+      else if (type === 'middle') svgContent = getMiddleSVG();
+      else svgContent = getBottomSVG();
+
+      slot.classList.add('has-piece');
+      slot.innerHTML = `
+        <div class="slot-piece">
+          <svg class="piece-svg" viewBox="0 0 80 44" xmlns="http://www.w3.org/2000/svg">${svgContent.replace(/^<svg[^>]*>/, '').replace('</svg>', '')}</svg>
+          <div class="piece-name">${name}</div>
+        </div>
+        <span class="remove-btn" onclick="removePiece('${type}')">✕</span>
+      `;
+    } else {
+      slot.classList.remove('has-piece');
+      const labels = { top: 'Top Piece', middle: 'Middle Piece', bottom: 'Bottom Piece' };
+      slot.innerHTML = `<span class="forge-slot-label">${labels[type]}</span>`;
+    }
+  });
+
+  // Connectors
+  const conn1 = document.getElementById('conn-1');
+  const conn2 = document.getElementById('conn-2');
+  conn1.classList.toggle('active', !!(forgeSlots.top && forgeSlots.middle));
+  conn2.classList.toggle('active', !!(forgeSlots.middle && forgeSlots.bottom));
+
+  const allFilled = forgeSlots.top && forgeSlots.middle && forgeSlots.bottom;
+  document.getElementById('insert-btn').disabled = !allFilled;
+
+  if (allFilled) {
+    showMessage(`Key assembled: ${forgeSlots.top} · ${forgeSlots.middle} · ${forgeSlots.bottom}`, '');
+    document.getElementById('keyhole-area').innerHTML = getKeyholeSVG(true);
+  } else {
+    document.getElementById('keyhole-area').innerHTML = getKeyholeSVG(false);
+    if (!forgeSlots.top && !forgeSlots.middle && !forgeSlots.bottom) {
+      showMessage('Drop fragments into the forge to assemble a key', '');
+    }
+  }
+}
+
+function removePiece(type) {
+  forgeSlots[type] = null;
+  renderForgeSlots();
+  showMessage('Fragment returned to the void', '');
+}
+
+function clearForge() {
+  forgeSlots = { top: null, middle: null, bottom: null };
+  renderForgeSlots();
+  showMessage('The forge is cleared', '');
+}
+
+function showMessage(msg, type) {
+  const el = document.getElementById('forge-msg');
+  el.textContent = msg;
+  el.className = 'forge-msg' + (type ? ` ${type}` : '');
+}
+
+// ==============================
+// TRY KEY
+// ==============================
+
+function tryKey() {
+  if (!forgeSlots.top || !forgeSlots.middle || !forgeSlots.bottom) return;
+
+  const isWinning =
+    forgeSlots.top === WINNING_KEY.top &&
+    forgeSlots.middle === WINNING_KEY.middle &&
+    forgeSlots.bottom === WINNING_KEY.bottom;
+
+  if (isWinning) {
+    openDoor();
+  } else {
+    showWrongKey();
+  }
+}
+
+// ==============================
+// DOOR OPEN
+// ==============================
+
+function openDoor() {
+  const overlay = document.getElementById('door-open-overlay');
+  const scene = document.getElementById('open-door-scene');
+
+  // Light behind the door
+  const lightBg = document.createElement('div');
+  lightBg.className = 'door-light-bg';
+
+  // Door panel that swings
+  const swingWrap = document.createElement('div');
+  swingWrap.className = 'door-swing-wrap';
+  const doorSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  doorSvg.setAttribute('viewBox', '0 0 160 240');
+  doorSvg.setAttribute('width', '220');
+  doorSvg.setAttribute('height', '320');
+  doorSvg.style.cssText = 'display:block;';
+  // Parse and inject door SVG content
+  const tmp = document.createElement('div');
+  tmp.innerHTML = getDoorSVG();
+  const srcSvg = tmp.querySelector('svg');
+  while (srcSvg.firstChild) doorSvg.appendChild(srcSvg.firstChild);
+  swingWrap.appendChild(doorSvg);
+
+  // Ambient bloom
+  const bloom = document.createElement('div');
+  bloom.className = 'light-bloom';
+
+  // Clickable portal (shown after swing)
+  const portal = document.createElement('div');
+  portal.className = 'light-portal';
+  portal.id = 'light-portal';
+  portal.onclick = goToOtherSide;
+
+  scene.innerHTML = '';
+  scene.appendChild(lightBg);
+  scene.appendChild(swingWrap);
+  scene.appendChild(portal);
+  overlay.appendChild(bloom);
+
+  overlay.classList.add('show');
+}
+
+function goToOtherSide() {
+  window.location.href = 'https://swobabobs.github.io/ohiodoor/';
+}
+
+// ==============================
+// WRONG KEY
+// ==============================
+
+function showWrongKey() {
+  const wrongMsgs = [
+    'The door does not yield to this combination.',
+    'The lock rejects your offering.',
+    'Something is not right. Try another combination.',
+    'The keyhole hisses and spits you out.',
+    'Not this key. Perhaps never this key.',
+    'The ancient mechanism refuses to turn.',
+    'Wrong. Try again, if you dare.',
+  ];
+  document.getElementById('wrong-msg').textContent =
+    wrongMsgs[Math.floor(Math.random() * wrongMsgs.length)];
+
+  // Shake the door
+  const door = document.getElementById('door-svg-wrap');
+  door.classList.add('fail-shake');
+  setTimeout(() => door.classList.remove('fail-shake'), 500);
+
+  document.getElementById('wrong-overlay').classList.add('show');
+  showMessage('The door rejected this key', 'fail');
+}
+
+function closeWrong() {
+  document.getElementById('wrong-overlay').classList.remove('show');
+}
+
+// ==============================
+// AMBIENT EMBERS
+// ==============================
+
+function spawnEmber() {
+  const container = document.getElementById('embers-container');
+  const ember = document.createElement('div');
+  ember.className = 'ember-particle';
+  const x = Math.random() * 200 - 100;
+  const y = Math.random() * 100;
+  ember.style.left = `calc(50% + ${x}px)`;
+  ember.style.bottom = `${y}px`;
+  ember.style.setProperty('--drift', `${(Math.random() - 0.5) * 30}px`);
+  ember.style.animationDuration = (2 + Math.random() * 2) + 's';
+  ember.style.animationDelay = (Math.random() * 2) + 's';
+  container.appendChild(ember);
+  setTimeout(() => ember.remove(), 4000);
+}
+
+setInterval(spawnEmber, 400);
+
+// ==============================
+// STARTUP
+// ==============================
+
+renderDoor();
+renderPieceGrid();
+renderForgeSlots();
+</script>
+</body>
+</html>
